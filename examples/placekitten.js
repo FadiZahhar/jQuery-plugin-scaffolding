@@ -202,23 +202,3 @@
     };
 
 })(jQuery.sub(), jQuery, this, document);
-
-PLUGIN_NAME = "placeKitten";
-    // default options hash.
-    defaults = {
-        "url": "http://placekitten.com/",
-        "width": 300,
-        "height": 200,
-        "cb": $.noop
-    };
-
-    var wrapped = create(this[0]);
-            // empty content
-            wrapped.$elem.empty();
-            // get image.
-            var img = new Image();
-            img.onload = function _continue() {
-                wrapped.$elem.append(img);
-                options.cb();    
-            };
-            img.src = options.url + '/' + options.height + '/' + options.width;
