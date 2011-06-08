@@ -2,12 +2,12 @@
     var toString = Object.prototype.toString,
         // uid for elements
         uuid = 0,
-        PLUGIN_NAME, defaults, Wrap, Base, create, scaffold, main;
+        PLUGIN_NAME, defaults, Wrap, Base, create, main;
 
-    scaffold = function() {
-            // over-ride bind so it uses a namespace by default
+    (function _scaffolding() {
+        // over-ride bind so it uses a namespace by default
         // namespace is PLUGIN_NAME_<uid>
-        $.fn.bind = function _bind(type, data, fn, nsKey) {
+        $.fn.bind = function  _bind(type, data, fn, nsKey) {
             if (typeof type === "object") {
                 for (var key in type) {
                     nsKey = key + this.data(PLUGIN_NAME)._ns;
@@ -43,7 +43,7 @@
         // Creates a new Wrapped element. This is cached. One wrapped element per
         // HTMLElement. Uses data-PLUGIN_NAME-cache as key and 
         // creates one if not exists.
-        create = (function cache_create() {
+        create = (function _cache_create() {
             function _factory(elem) {
                 return Object.create(Wrap, {
                     "elem": {value: elem},
@@ -121,13 +121,25 @@
                 create(elem)[op](hash);    
             }
         };
-
+        
         // expose publicly.
-        methods._Wrap = Wrap;
-        methods._create = create;
-        methods._$ = $;
-        methods.global = defaults;
-
+        Object.defineProperties(methods, {
+            "_Wrap": {
+                "get": function() { return Wrap; },
+                "set": function(v) { Wrap = v; }
+            },
+            "_create":{
+                value: create
+            },
+            "_$": {
+                value: $    
+            },
+            "global": {
+                "get": function() { return defaults; },
+                "set": function(v) { defaults = v; }
+             }
+        });
+        
         // main plugin. $(selector).PLUGIN_NAME(option_hash)
         jQuery.fn[PLUGIN_NAME] = function _main(op, hash) {
             if (typeof op === "object" || !op) {
@@ -138,8 +150,7 @@
                 });
             }
         };
-    };
-    
+    }());
 
     // -------------------------------
     // --------- YOUR CODE -----------
@@ -183,13 +194,8 @@
                 options.cb();    
             };
             img.src = options.url + '/' + options.height + '/' + options.width;
-
-            
         });
         // TODO: Add custom logic for public methods
     };
-
-    // run the scaffolding code.
-    scaffold();
 
 })(jQuery.sub(), jQuery, this, document);
