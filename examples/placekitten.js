@@ -112,12 +112,13 @@
                 hash = op;
                 op = elem;
                 elem = hash.elem;
-            } else if (!elem.nodeType) {
-                hash = elem;
-                op = PLUGIN_NAME;
+            // if no params or elem is an object
+            } else if (!elem || !elem.nodeType) {
+                hash = elem || {};
                 elem = hash.elem;
-            }
-            
+            } 
+
+            op = op || PLUGIN_NAME;
             elem = elem || document.body;
             if (Array.isArray(elem)) {
                 elem.forEach(function(val) {
