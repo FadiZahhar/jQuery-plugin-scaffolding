@@ -188,12 +188,12 @@
         };
 
         self.placeKitten = function _placeKitten(options) {
-            options = $.extend(true, defaults, options);    
+            options = $.extend(true, {}, defaults, options);    
             // start deferred
             var def = $.Deferred();
 
             // empty content
-            this._content = this.$elem.detach();
+            this._content = this.$elem.children().detach();
 
             // get image.
             var img = new Image();
