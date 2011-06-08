@@ -187,7 +187,7 @@
         options = $.extend(true, defaults, options);    
 
         this.each(function() {
-            var wrapped = create(this[0]);
+            var wrapped = create(this);
             // empty content
             wrapped.$elem.empty();
             // get image.
