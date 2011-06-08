@@ -112,7 +112,12 @@
                 hash = op;
                 op = elem;
                 elem = hash.elem;
+            } else if (!elem.nodeType) {
+                hash = elem;
+                op = PLUGIN_NAME;
+                elem = hash.elem;
             }
+            
             elem = elem || document.body;
             if (Array.isArray(elem)) {
                 elem.forEach(function(val) {
@@ -174,13 +179,30 @@
         
         var $destroy = this.destroy;
         self.destroy = function _destroy() {
-            // custom destruction logic
-            // remove elements and other events / data not stored on .$elem
-
             $destroy.apply(this, arguments);
+
+            this.$elem.empty();
+            this.$elem.append(this._content);
         };
 
-        // TODO: Add custom logic for public methods
+        self.placeKitten = function _placeKitten(options) {
+            // start deferred
+            var def = $.Deferred();
+
+            // empty content
+            this._content = this.$elem.detach();
+
+            // get image.
+            var img = new Image();
+            img.onload = (function _continue() {
+                this.$elem.append(img);
+                def.resolve();
+            }).bind(this);
+            img.src = options.url + '/' + options.height + '/' + options.width;
+
+            return def;
+        };
+
         return self;
     }());
 
@@ -189,22 +211,10 @@
         
         var defs = [];
         this.each(function() {
-            var wrapped = create(this);
-            // empty content
-            wrapped.$elem.empty();
-            // get image.
-            var def = $.Deferred();
-            defs.push(def);
-            var img = new Image();
-            img.onload = function _continue() {
-                wrapped.$elem.append(img);
-                def.resolve();
-            };
-            img.src = options.url + '/' + options.height + '/' + options.width;
+            defs.push(create(this).placeKitten(options));
         });
 
         $.when.apply($, defs).then(options.cb);
-        // TODO: Add custom logic for public methods
     };
 
 })(jQuery.sub(), jQuery, this, document);
