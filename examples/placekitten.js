@@ -186,19 +186,24 @@
 
     main = function _main(options) {
         options = $.extend(true, defaults, options);    
-
+        
+        var defs = [];
         this.each(function() {
             var wrapped = create(this);
             // empty content
             wrapped.$elem.empty();
             // get image.
+            var def = $.Deferred();
+            defs.push(def);
             var img = new Image();
             img.onload = function _continue() {
                 wrapped.$elem.append(img);
-                options.cb();    
+                def.resolve();
             };
             img.src = options.url + '/' + options.height + '/' + options.width;
         });
+
+        $.when.apply($, defs).then(options.cb);
         // TODO: Add custom logic for public methods
     };
 
