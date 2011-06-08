@@ -67,23 +67,22 @@
     }());
 
     // Base object which every Wrap inherits from
-    Base = (function() {
-        var self = Object.create({});
+    Base = new function() {
         // destroy method. unbinds, removes data
-        self.destroy = function _destroy() {
+        this.destroy = function _destroy() {
             this.$elem.unbind();
             this.$elem.removeData(PLUGIN_NAME);
             this.$elem.removeData(PLUGIN_NAME + "-cache");
         };
 
         // initializes the namespace and stores it on the elem.
-        self.init = function _init() {
+        this.init = function _init() {
             this._ns = "." + PLUGIN_NAME + "_" + this.uid;
             this.data("_ns", this._ns);
         };
 
         // returns data thats stored on the elem under the plugin.
-        self.data = function _data(name, value) {
+        this.data = function _data(name, value) {
             var $elem = this.$elem, data;
             if (name === void 0) {
                 return $elem.data(PLUGIN_NAME);
@@ -101,8 +100,7 @@
                 $elem.data(PLUGIN_NAME, data);
             }
         };
-        return self;
-    })();
+    };
 
     // Call methods directly. $.PLUGIN_NAME("method", option_hash)
     jQuery[PLUGIN_NAME] = function _methods(elem, op, hash) {
@@ -121,7 +119,6 @@
     };
 
     _methods._Wrap = Wrap;
-    _methods._create = create;
 
     // main plugin. $(selector).PLUGIN_NAME(option_hash)
     jQuery.fn[PLUGIN_NAME] = function _main(op, hash) {
@@ -138,31 +135,42 @@
     // --------- YOUR CODE -----------
     // -------------------------------
 
-    PLUGIN_NAME = "myPlugin",
+    PLUGIN_NAME = "placeKitten",
     // default options hash.
     defaults = {
-        // TODO: Add defaults
+        url: "http://placekitten.com/",
+        height: 200,
+        width: 300,
+        cb: $.noop
     };
 
     Wrap = (function() {
         var self = Object.create(Base);
         
         var $destroy = this.destroy;
-        self.destroy = function _destroy() {
-            // custom destruction logic
-            // remove elements and other events / data not stored on .$elem
-
+        this.destroy = function _destroy() {
             $destroy.apply(this, arguments);
         };
 
         // TODO: Add custom logic for public methods
         return self;
-    }());
+    })();
 
     function main(options) {
         options = $.extend(true, defaults, options);    
 
         var wrapped = create(this[0]);
+        // empty content
+        wrapped.$elem.empty();
+        // get image.
+        var img = new Image();
+        img.src = options.url + '/' + options.height + '/' + options.width;
+        img.onload = continue;
+
+        function continue() {
+            wrapped.$elem.append(img);
+            options.cb();    
+        }
         // TODO: Add custom logic for public methods
     }
 
