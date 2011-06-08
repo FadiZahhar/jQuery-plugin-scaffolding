@@ -120,6 +120,7 @@
 
             op = op || PLUGIN_NAME;
             elem = elem || document.body;
+
             if (Array.isArray(elem)) {
                 elem.forEach(function(val) {
                     create(val)[op](hash);    
@@ -187,6 +188,7 @@
         };
 
         self.placeKitten = function _placeKitten(options) {
+            options = $.extend(true, defaults, options);    
             // start deferred
             var def = $.Deferred();
 
@@ -208,8 +210,6 @@
     }());
 
     main = function _main(options) {
-        options = $.extend(true, defaults, options);    
-        
         var defs = [];
         this.each(function() {
             defs.push(create(this).placeKitten(options));
