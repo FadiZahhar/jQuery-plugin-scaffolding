@@ -4,7 +4,7 @@
         uuid = 0,
         PLUGIN_NAME, defaults, Wrap, Base, create, main;
 
-    (function _scaffolding() {
+    var scaffolding = function _scaffolding() {
         // over-ride bind so it uses a namespace by default
         // namespace is PLUGIN_NAME_<uid>
         $.fn.bind = function  _bind(type, data, fn, nsKey) {
@@ -150,7 +150,7 @@
                 });
             }
         };
-    }());
+    };
 
     // -------------------------------
     // --------- YOUR CODE -----------
@@ -164,6 +164,9 @@
         "height": 200,
         "cb": $.noop
     };
+
+    // run scaffolding
+    scaffolding();
 
     Wrap = (function() {
         var self = Object.create(Base);
@@ -199,3 +202,23 @@
     };
 
 })(jQuery.sub(), jQuery, this, document);
+
+PLUGIN_NAME = "placeKitten";
+    // default options hash.
+    defaults = {
+        "url": "http://placekitten.com/",
+        "width": 300,
+        "height": 200,
+        "cb": $.noop
+    };
+
+    var wrapped = create(this[0]);
+            // empty content
+            wrapped.$elem.empty();
+            // get image.
+            var img = new Image();
+            img.onload = function _continue() {
+                wrapped.$elem.append(img);
+                options.cb();    
+            };
+            img.src = options.url + '/' + options.height + '/' + options.width;
