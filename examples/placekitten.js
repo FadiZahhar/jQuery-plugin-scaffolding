@@ -86,10 +86,10 @@
             // returns data thats stored on the elem under the plugin.
             self.data = function _data(name, value) {
                 var $elem = this.$elem, data;
-                if (name === void 0) {
+                if (name === undefined) {
                     return $elem.data(PLUGIN_NAME);
                 } else if (typeof name === "object") {
-                    data = $elem.data(PLUGIN_NAME);
+                    data = $elem.data(PLUGIN_NAME) || {};
                     for (var k in name) {
                         data[k] = name[k];
                     }
@@ -97,7 +97,7 @@
                 } else if (value === undefined) {
                     return $elem.data(PLUGIN_NAME)[name];
                 } else {
-                    data = $elem.data(PLUGIN_NAME);
+                    data = $elem.data(PLUGIN_NAME) || {};
                     data[name] = value;
                     $elem.data(PLUGIN_NAME, data);
                 }
