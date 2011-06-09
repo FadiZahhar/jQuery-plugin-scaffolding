@@ -49,7 +49,7 @@
                     "elem": {value: elem},
                     "$elem": {value: $(elem)},
                     "uid": {value: uuid++}
-                }).init();
+                })._init();
             }
             var uid = 0;
             var cache = {};
@@ -78,7 +78,7 @@
             };
 
             // initializes the namespace and stores it on the elem.
-            self.init = function _init() {
+            self._init = function _init() {
                 this._ns = "." + PLUGIN_NAME + "_" + this.uid;
                 this.data("_ns", this._ns);
                 return this;
@@ -109,7 +109,7 @@
         // Call methods directly. $.PLUGIN_NAME("method", option_hash)
         var methods = jQuery[PLUGIN_NAME] = function _methods(elem, op, hash) {
             if (typeof elem === "string") {
-                hash = op;
+                hash = op || {};
                 op = elem;
                 elem = hash.elem;
             // if no params or elem is an object
@@ -151,10 +151,10 @@
         // main plugin. $(selector).PLUGIN_NAME(option_hash)
         jQuery.fn[PLUGIN_NAME] = function _main(op, hash) {
             if (typeof op === "object" || !op) {
-                main.call(this, op);
+                return main.call(this, op || {});
             } else {
                 this.each(function _forEach() {
-                    create(this)[op](hash);
+                    create(this)[op](hash || {});
                 });
             }
         };
@@ -199,7 +199,8 @@
             var img = new Image();
             img.onload = (function _continue() {
                 this.$elem.append(img);
-                def.resolve();
+                // pass img to deferred.
+                def.resolve(img);
             }).bind(this);
             img.src = options.url + '/' + options.height + '/' + options.width;
 
@@ -210,12 +211,15 @@
     }());
 
     main = function _main(options) {
-        var defs = [];
-        this.each(function() {
-            defs.push(create(this).placeKitten(options));
+
+        // for each elem create a wrapper and call the plugin method 
+        // with the options. Turn it into an array of deferreds.
+        var defs = this.map(function() {
+            return create(this).placeKitten(options);
         });
 
-        $.when.apply($, defs).then(options.cb);
+        // call the cb when were done and return the deffered.
+        return $.when.apply($, defs).then(options.cb);
     };
 
 })(jQuery.sub(), jQuery, this, document);
