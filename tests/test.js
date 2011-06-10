@@ -51,7 +51,10 @@ $(function() {
 		var div = $("div");
 
 		stop();
-		var go = after(7, start);
+		var go = after(7, function() {
+			I._create(document.body).destroy();
+			start();
+		});
 		start();
 
 		var testThen = function _testThen(ret) {
@@ -105,6 +108,8 @@ $(function() {
 			});
 			go();
 		});
+
+		
 	});
 
 	asyncTest("Testing jQuery.Identity", 29, function _jQueryIdentity() {
@@ -112,7 +117,10 @@ $(function() {
 		var div = $("div");
 
 		stop();
-		var go = after(17, start);
+		var go = after(17, function() {
+			I._create(document.body).destroy();
+			start();
+		});
 		start();
 
 		var testThen = function _testThen($elem, ret) {
@@ -181,6 +189,7 @@ $(function() {
 		I($.makeArray(div), {
 			"foo": "bar"
 		}, "Identity").then(testThenObjDiv);
+		I._create(document.body).destroy();
 		
 	});
 
@@ -198,29 +207,137 @@ $(function() {
 		ok(o.$elem, "Wrap does not have a $element");
 		ok(o.uid, "Wrap does not have a uid");
 		ok(o._ns, "Wrap does not have a event namespace");
+		ok(o.data, "Wrap does not have a data method");
+		ok(o._init, "Wrap does not have an init method");
+		ok(o.destroy, "Wrap does not have a destroy method");
+		ok(o.Identity, "Wrap does not have an Identity method");
 		notEqual(o.uid, q.uid, "uid is not unique");
 		notEqual(o._ns, q._ns, "ns is not unique");
 		strictEqual(o._ns, o.data("_ns"), 
 			"the event namespace is not stored in data properely")
-	});
 
-	/* TEST create (including ._ns) */
+		o.Identity();
+		ok(o.options, "options does not exist on Wrapped object");
+		o.destroy();
+	});
 
 	module("Wrap");
 
-	/* TEST Wrap.data */
+	test("Data", function _Data() {
+		var c = I._create;
 
-	/* TEST Wrap.destroy */
+		var o = c(document.body);
+		o.data("foo", "bar");
+		strictEqual(o.data("foo"), "bar", 
+			"data is not stored properly in data");
+		o.data({"foo2": "bar2"});
+		strictEqual(o.data("foo2"), "bar2",
+			"data is not stored properly for objects");
+		var p = o.data();
+		deepEqual(p, {
+			"_ns": o._ns,
+			"foo": "bar",
+			"foo2": "bar2"
+		}, "stored data is not as expected");
+
+		[1, true, {"foo": "bar"}, [1,2,3], "foz", undefined, null]
+			.forEach(function _each(v) {
+				o.data("foo", v);
+				deepEqual(v, o.data("foo"), "Could not set " + v + "on data");
+			})
+		o.destroy();
+	});
+
+	asyncTest("Destroy", function _Destroy() {
+		var c = I._create;
+
+		var o = c(document.body);
+		o.destroy();
+		o._init();
+		var foo = 42;
+		o.$elem.bind("click", function _click() {
+			foo = null;
+		})
+		$(o.elem).one("click", function _continue() {
+			equal(foo, 42, "click event was not unbound");
+			equal(o.data("foo"), undefined, "data was not removed");
+			strictEqual(o.options, undefined);
+			start();
+		})
+		o.data("foo", "bar");
+		o.destroy();
+		o.$elem.click();
+	})
 
 	module("_$");
 
-	/* TEST _$.fn.bind */
+	asyncTest("Bind", function _Bind() {
+		var c = I._create;
 
-	/* TEST _$.fn.unbind */
+		var o = c(document.body);
+		var foo = 42;
+		o.$elem.bind("click", function _click() {
+			foo = null;
+		})
+		$(o.elem).one("click", function _continue() {
+			equal(foo, 42, "click event was not bound properly");
+			o.destroy();
+			start();
+		});
+		$(o.elem).unbind("click" + o._ns);
+		o.$elem.click();
+	});
+
+	asyncTest("UnBind", function _Bind() {
+		var c = I._create;
+
+		var o = c(document.body);
+		var foo = 42;
+		$(o.elem).bind("click" + o._ns, function _click() {
+			foo = null;
+		})
+		$(o.elem).one("click", function _continue() {
+			equal(foo, 42, "click event was not unbound properly");
+			o.destroy();
+			o._init();
+			$(o.elem).bind("click" + o._ns, function _click2() {
+				foo = null;
+			})
+			$(o.elem).one("click", function _continue2() {
+				equal(foo, 42, "namespace was not unbound properly");
+				o.destroy();		
+				start();
+			});
+			o.$elem.unbind();
+			o.$elem.click();
+		})
+		o.$elem.unbind("click");
+		o.$elem.click();
+		
+	});
 
 	module("");
 
-	/* TEST global */
+	test("Global", function _Global() {
+		var c = I._create;
+		$.Identity.global = { "baz": "bar" };
+
+		var o = c(document.body);
+		o.Identity();
+		strictEqual(o.options.baz, "bar", 
+			"globals were not changed");
+		o.Identity({ "baz": "foo"});
+		strictEqual(o.options.baz, "foo",
+			"globals cannot be overwritten");
+		o.Identity({ "bar": "boz"});
+		strictEqual(o.options.bar, "boz",
+			"cannot set other properties on options");
+
+		$.Identity.global.baz = "foo";
+		o.Identity();
+		strictEqual(o.options.baz, "foo",
+			"Cannot change globals through assignment");
+	});
 
 
 });
