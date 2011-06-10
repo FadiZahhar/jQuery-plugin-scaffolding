@@ -1,10 +1,23 @@
 (function($, jQuery, window, document, undefined) {
+    var PLUGIN_NAME = "placeKitten";
+    // default options hash.
+    var defaults = {
+        "url": "http://placekitten.com/",
+        "width": 300,
+        "height": 200,
+        "cb": $.noop
+    };
+
+    // -------------------------------
+    // -------- BOILERPLATE ----------
+    // -------------------------------
+
     var toString = Object.prototype.toString,
         // uid for elements
         uuid = 0,
-        PLUGIN_NAME, defaults, Wrap, Base, create, main;
+        Wrap, Base, create, main;
 
-    var scaffolding = function _scaffolding() {
+    (function _boilerplate() {
         // over-ride bind so it uses a namespace by default
         // namespace is PLUGIN_NAME_<uid>
         $.fn.bind = function  _bind(type, data, fn, nsKey) {
@@ -17,7 +30,7 @@
             }
 
             nsKey = type + this.data(PLUGIN_NAME)._ns;
-            return jQuery.fn.bind.call(jQuery, nsKey, data, fn);
+            return jQuery.fn.bind.call(this, nsKey, data, fn);
         };
 
         // override unbind so it uses a namespace by default.
@@ -31,56 +44,63 @@
                     this.unbind(nsKey, type[key]);
                 }
             } else if (arguments.length === 0) {
-                nsKey = type + this.data(PLUGIN_NAME)._ns;
-                this.unbind(nsKey);
+                return jQuery.fn.unbind.call(this, this.data(PLUGIN_NAME)._ns);
             } else {
                 nsKey = type + this.data(PLUGIN_NAME)._ns;
-                return jQuery.fn.unbind.call(jQuery, nsKey, fn);    
+                return jQuery.fn.unbind.call(this, nsKey, fn);    
             }
             return this;
         };
 
-        // Creates a new Wrapped element. This is cached. One wrapped element per
-        // HTMLElement. Uses data-PLUGIN_NAME-cache as key and 
+        // Creates a new Wrapped element. This is cached. One wrapped element 
+        // per HTMLElement. Uses data-PLUGIN_NAME-cache as key and 
         // creates one if not exists.
         create = (function _cache_create() {
             function _factory(elem) {
                 return Object.create(Wrap, {
                     "elem": {value: elem},
                     "$elem": {value: $(elem)},
-                    "uid": {value: uuid++}
-                })._init();
+                    "uid": {value: ++uuid}
+                });
             }
             var uid = 0;
             var cache = {};
-            var attr = "data-" + PLUGIN_NAME + "-cache";
 
             return function _cache(elem) {
-                var val = elem.getAttribute(attr);
-                if (val === "") {
-                    elem.setAttribute(attr, PLUGIN_NAME + "_" + uid++);
-                } 
-                if (cache[val] === undefined) {
-                    cache[val] = _factory(elem);
+                var key = "";
+                for (var k in cache) {
+                    if (cache[k].elem == elem) {
+                        key = k;
+                        break;
+                    }
                 }
-                return cache[val];
+                if (key === "") {
+                    cache[PLUGIN_NAME + "_" + ++uid] = _factory(elem);
+                    key = PLUGIN_NAME + "_" + uid;
+                } 
+                return cache[key]._init();
             };
         }());
 
         // Base object which every Wrap inherits from
-        Base = (function() {
+        Base = (function _Base() {
             var self = Object.create({});
             // destroy method. unbinds, removes data
             self.destroy = function _destroy() {
-                this.$elem.unbind();
-                this.$elem.removeData(PLUGIN_NAME);
-                this.$elem.removeData(PLUGIN_NAME + "-cache");
+                if (this._alive) {
+                    this.$elem.unbind();
+                    this.$elem.removeData(PLUGIN_NAME);
+                    this._alive = false;    
+                }
             };
 
             // initializes the namespace and stores it on the elem.
             self._init = function _init() {
-                this._ns = "." + PLUGIN_NAME + "_" + this.uid;
-                this.data("_ns", this._ns);
+                if (!this._alive) {
+                    this._ns = "." + PLUGIN_NAME + "_" + this.uid;
+                    this.data("_ns", this._ns);    
+                    this._alive = true;
+                }
                 return this;
             };
 
@@ -95,9 +115,9 @@
                         data[k] = name[k];
                     }
                     $elem.data(PLUGIN_NAME, data);
-                } else if (value === undefined) {
-                    return $elem.data(PLUGIN_NAME)[name];
-                } else {
+                } else if (arguments.length === 1) {
+                    return ($elem.data(PLUGIN_NAME) || {})[name];
+                } else  {
                     data = $elem.data(PLUGIN_NAME) || {};
                     data[name] = value;
                     $elem.data(PLUGIN_NAME, data);
@@ -106,28 +126,34 @@
             return self;
         })();
 
-        // Call methods directly. $.PLUGIN_NAME("method", option_hash)
+        // Call methods directly. $.PLUGIN_NAME(elem, "method", option_hash)
         var methods = jQuery[PLUGIN_NAME] = function _methods(elem, op, hash) {
             if (typeof elem === "string") {
                 hash = op || {};
                 op = elem;
                 elem = hash.elem;
-            // if no params or elem is an object
-            } else if (!elem || !elem.nodeType) {
+            } else if ((elem && elem.nodeType) || Array.isArray(elem)) {
+                if (typeof op !== "string") {
+                    hash = op;
+                    op = null;
+                }
+            } else {
                 hash = elem || {};
                 elem = hash.elem;
-            } 
+            }
 
+            hash = hash || {}
             op = op || PLUGIN_NAME;
             elem = elem || document.body;
-
             if (Array.isArray(elem)) {
-                elem.forEach(function(val) {
-                    create(val)[op](hash);    
+                var defs = elem.map(function(val) {
+                    return create(val)[op](hash);    
                 });
             } else {
-                create(elem)[op](hash);    
+                var defs = [create(elem)[op](hash)];    
             }
+
+            return $.when.apply($, defs).then(hash.cb);
         };
         
         // expose publicly.
@@ -148,78 +174,69 @@
              }
         });
         
-        // main plugin. $(selector).PLUGIN_NAME(option_hash)
+        // main plugin. $(selector).PLUGIN_NAME("method", option_hash)
         jQuery.fn[PLUGIN_NAME] = function _main(op, hash) {
             if (typeof op === "object" || !op) {
-                return main.call(this, op || {});
-            } else {
-                this.each(function _forEach() {
-                    create(this)[op](hash || {});
-                });
+                hash = op;
+                op = null;
             }
+            op = op || PLUGIN_NAME;
+            hash = hash || {};
+
+            // map the elements to deferreds.
+            var defs = this.map(function _map() {
+                return create(this)[op](hash);
+            }).toArray();
+
+            // call the cb when were done and return the deffered.
+            return $.when.apply($, defs).then(hash.cb);
+
         };
-    };
+    }());
 
     // -------------------------------
     // --------- YOUR CODE -----------
     // -------------------------------
 
-    PLUGIN_NAME = "placeKitten";
-    // default options hash.
-    defaults = {
-        "url": "http://placekitten.com/",
-        "width": 300,
-        "height": 200,
-        "cb": $.noop
-    };
+    main = function _main(options) {
+        this.options = options = $.extend(true, defaults, options); 
+        var def = $.Deferred();
 
-    // run scaffolding
-    scaffolding();
+        // empty content
+        this._content = this.$elem.children().detach();
+
+        // get image.
+        var img = new Image();
+        img.onload = (function _continue() {
+            this.$elem.append(img);
+            // pass img to deferred.
+            def.resolve(img);
+        }).bind(this);
+        
+        img.src = options.url + '/' + options.height + '/' + options.width;
+
+        return def;
+    }
 
     Wrap = (function() {
         var self = Object.create(Base);
         
-        var $destroy = this.destroy;
+        var $destroy = self.destroy;
         self.destroy = function _destroy() {
-            $destroy.apply(this, arguments);
+            delete this.options;
 
             this.$elem.empty();
             this.$elem.append(this._content);
+
+            $destroy.apply(this, arguments);
         };
 
-        self.placeKitten = function _placeKitten(options) {
-            options = $.extend(true, {}, defaults, options);    
-            // start deferred
-            var def = $.Deferred();
+        // set the main PLUGIN_NAME method to be main.
+        self[PLUGIN_NAME] = main;
 
-            // empty content
-            this._content = this.$elem.children().detach();
-
-            // get image.
-            var img = new Image();
-            img.onload = (function _continue() {
-                this.$elem.append(img);
-                // pass img to deferred.
-                def.resolve(img);
-            }).bind(this);
-            img.src = options.url + '/' + options.height + '/' + options.width;
-
-            return def;
-        };
+        // TODO: Add custom logic for public methods
 
         return self;
     }());
-
-    main = function _main(options) {
-
-        // for each elem create a wrapper and call the plugin method 
-        // with the options. Turn it into an array of deferreds.
-        var defs = this.map(function() {
-            return create(this).placeKitten(options);
-        });
-
-        // call the cb when were done and return the deffered.
-        return $.when.apply($, defs).then(options.cb);
-    };
 
 })(jQuery.sub(), jQuery, this, document);
